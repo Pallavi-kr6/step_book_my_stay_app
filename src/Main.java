@@ -1,47 +1,75 @@
-abstract class Room {
+import java.util.HashMap;
+import java.util.Map;
 
-    protected int numberOfBeds;
-    protected int squareFeet;
-    protected double pricePerNight;
+/**
+ * CLASS - RoomInventory
+ * Responsible for maintaining centralized room availability.
+ */
+  class RoomInventory {
 
-    public Room(int numberOfBeds, int squareFeet, double pricePerNight) {
-        this.numberOfBeds = numberOfBeds;
-        this.squareFeet = squareFeet;
-        this.pricePerNight = pricePerNight;
+    /** HashMap storing room type -> available count */
+    private HashMap<String, Integer> inventory;
+
+    /**
+     * Constructor initializes room availability
+     */
+    public RoomInventory() {
+        inventory = new HashMap<>();
+
+        // Register room types with initial availability
+        inventory.put("SingleRoom", 10);
+        inventory.put("DoubleRoom", 5);
     }
 
-    public void displayRoomDetails() {
-        System.out.println("Beds: " + numberOfBeds);
-        System.out.println("Room Size: " + squareFeet + " sq ft");
-        System.out.println("Price Per Night: Rs." + pricePerNight);
+    /**
+     * Retrieves availability of a specific room type
+     */
+    public int getAvailability(String roomType) {
+        return inventory.getOrDefault(roomType, 0);
+    }
+
+    /**
+     * Updates availability for a given room type
+     */
+    public void updateAvailability(String roomType, int newCount) {
+        inventory.put(roomType, newCount);
+    }
+
+    /**
+     * Displays full inventory state
+     */
+    public void displayInventory() {
+        System.out.println("Current Room Inventory:");
+
+        for (Map.Entry<String, Integer> entry : inventory.entrySet()) {
+            System.out.println(entry.getKey() + " -> Available: " + entry.getValue());
+        }
     }
 }
 
-class SingleRoom extends Room {
-
-    public SingleRoom() {
-        super(1, 250, 1500.0);
-    }
-}
-
-class DoubleRoom extends Room {
-
-    public DoubleRoom() {
-        super(2, 400, 2500.0);
-    }
-}
-
-public class Main {
+/**
+ * MAIN CLASS
+ * Demonstrates centralized room inventory management
+ */
+public class Main{
 
     public static void main(String[] args) {
 
-        Room r1 = new SingleRoom();
-        Room r2 = new DoubleRoom();
+        // Initialize inventory system
+        RoomInventory inventory = new RoomInventory();
 
-        System.out.println("Single Room Details:");
-        r1.displayRoomDetails();
+        // Display current inventory
+        inventory.displayInventory();
 
-        System.out.println("\nDouble Room Details:");
-        r2.displayRoomDetails();
+        System.out.println("\nChecking availability for SingleRoom:");
+        System.out.println("Available: " + inventory.getAvailability("SingleRoom"));
+
+        // Update inventory after booking
+        System.out.println("\nUpdating inventory after booking...");
+        inventory.updateAvailability("SingleRoom", 9);
+
+        // Display updated inventory
+        System.out.println("\nUpdated Inventory:");
+        inventory.displayInventory();
     }
 }
