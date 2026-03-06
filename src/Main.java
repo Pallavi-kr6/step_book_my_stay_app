@@ -1,128 +1,98 @@
-import java.util.HashMap;
-import java.util.Map;
-abstract class Room {
-    protected int numberOfBeds;
-    protected int squareFeet;
-    protected double pricePerNight;
+/**
+ * CLASS - Reservation
+ * Represents a guest's intent to book a specific room type
+ */
+import java.util.LinkedList;
+import java.util.Queue;
 
-    public Room(int numberOfBeds, int squareFeet, double pricePerNight) {
-        this.numberOfBeds = numberOfBeds;
-        this.squareFeet = squareFeet;
-        this.pricePerNight = pricePerNight;
+/**
+ * CLASS - BookingRequestQueue
+ * Stores booking requests in arrival order (FIFO)
+ */
+  class BookingRequestQueue {
+    private Queue<Reservation> queue;
+
+    public BookingRequestQueue() {
+        queue = new LinkedList<>();
     }
 
-    public void displayRoomDetails() {
-        System.out.println("Beds: " + numberOfBeds);
-        System.out.println("Room Size: " + squareFeet + " sq ft");
-        System.out.println("Price Per Night: Rs." + pricePerNight);
-    }
-}
-
-class SingleRoom extends Room {
-    public SingleRoom() {
-        super(1, 250, 1500.0);
-    }
-}
-
-class DoubleRoom extends Room {
-    public DoubleRoom() {
-        super(2, 400, 2500.0);
-    }
-}
- class RoomSearchService {
-
-    private RoomInventory inventory;
-
-    public RoomSearchService(RoomInventory inventory) {
-        this.inventory = inventory;
+    // Add a reservation to the queue
+    public void addRequest(Reservation reservation) {
+        queue.offer(reservation);
+        System.out.println("Booking request added: " + reservation);
     }
 
-    /**
-     * Displays all available room types with their details
-     */
-    public void displayAvailableRooms() {
+    // Peek at the next reservation (without removing)
+    public Reservation peekNext() {
+        return queue.peek();
+    }
 
-        System.out.println("Available Rooms:");
+    // Process (remove) the next reservation
+    public Reservation processNext() {
+        return queue.poll();
+    }
 
-        // Get inventory map
-        HashMap<String, Integer> invMap = inventory.getInventoryMap();
+    // Check if queue is empty
+    public boolean isEmpty() {
+        return queue.isEmpty();
+    }
 
-        for (Map.Entry<String, Integer> entry : invMap.entrySet()) {
-            String roomType = entry.getKey();
-            int available = entry.getValue();
-
-            if (available > 0) {  // Only show rooms with availability
-                Room room = null;
-
-                // Instantiate room object to get details
-                switch (roomType) {
-                    case "SingleRoom":
-                        room = new SingleRoom();
-                        break;
-                    case "DoubleRoom":
-                        room = new DoubleRoom();
-                        break;
-                }
-
-                if (room != null) {
-                    System.out.println("\nRoom Type: " + roomType);
-                    room.displayRoomDetails();
-                    System.out.println("Available: " + available);
-                }
-            }
+    // Display all pending requests
+    public void displayQueue() {
+        System.out.println("Current Booking Request Queue:");
+        for (Reservation r : queue) {
+            System.out.println(r);
         }
     }
 }
- class RoomInventory {
+  class Reservation {
+    private String guestName;
+    private String roomType;
 
-    private HashMap<String, Integer> inventory;
-
-    public RoomInventory() {
-        inventory = new HashMap<>();
-        inventory.put("SingleRoom", 10);
-        inventory.put("DoubleRoom", 5);
+    public Reservation(String guestName, String roomType) {
+        this.guestName = guestName;
+        this.roomType = roomType;
     }
 
-    public int getAvailability(String roomType) {
-        return inventory.getOrDefault(roomType, 0);
+    public String getGuestName() {
+        return guestName;
     }
 
-    public void updateAvailability(String roomType, int newCount) {
-        inventory.put(roomType, newCount);
+    public String getRoomType() {
+        return roomType;
     }
 
-    // Added method for read-only access
-    public HashMap<String, Integer> getInventoryMap() {
-        return new HashMap<>(inventory);  // return a copy for safety
-    }
-
-    public void displayInventory() {
-        System.out.println("Current Room Inventory:");
-        for (String key : inventory.keySet()) {
-            System.out.println(key + " -> Available: " + inventory.get(key));
-        }
+    @Override
+    public String toString() {
+        return "Guest: " + guestName + ", Room Type: " + roomType;
     }
 }
 
 /**
  * MAIN CLASS
- * Demonstrates room search & availability check
+ * Demonstrates first-come-first-served booking request queue
  */
-public class Main  {
+public class Main{
 
     public static void main(String[] args) {
 
-        // Initialize inventory system
-        RoomInventory inventory = new RoomInventory();
+        BookingRequestQueue requestQueue = new BookingRequestQueue();
 
-        // Initialize search service
-        RoomSearchService searchService = new RoomSearchService(inventory);
+        // Simulate guest booking requests
+        requestQueue.addRequest(new Reservation("Alice", "SingleRoom"));
+        requestQueue.addRequest(new Reservation("Bob", "DoubleRoom"));
+        requestQueue.addRequest(new Reservation("Charlie", "SingleRoom"));
 
-        // Display available rooms (read-only)
-        searchService.displayAvailableRooms();
+        System.out.println("\nDisplaying all pending booking requests:");
+        requestQueue.displayQueue();
 
-        // Demonstrate that inventory remains unchanged
-        System.out.println("\nInventory after search (should be unchanged):");
-        inventory.displayInventory();
+        System.out.println("\nProcessing requests in arrival order (FIFO):");
+        while (!requestQueue.isEmpty()) {
+            Reservation r = requestQueue.processNext();
+            System.out.println("Processing: " + r);
+        }
+
+        System.out.println("\nQueue after processing all requests:");
+        requestQueue.displayQueue();
     }
 }
