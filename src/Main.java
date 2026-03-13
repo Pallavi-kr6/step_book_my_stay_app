@@ -1,138 +1,111 @@
+import java.io.*;
 import java.util.*;
 
-// Reservation class
-class Reservation {
 
-    private String reservationId;
-    private String guestName;
-    private String roomType;
-    private String roomId;
-    private boolean active;
+class Reservation implements Serializable {
 
-    public Reservation(String reservationId, String guestName, String roomType, String roomId) {
+    private static final long serialVersionUID = 1L;
+
+    String reservationId;
+    String guestName;
+    String roomType;
+
+    public Reservation(String reservationId, String guestName, String roomType) {
         this.reservationId = reservationId;
         this.guestName = guestName;
         this.roomType = roomType;
-        this.roomId = roomId;
-        this.active = true;
-    }
-
-    public String getReservationId() {
-        return reservationId;
-    }
-
-    public String getRoomType() {
-        return roomType;
-    }
-
-    public String getRoomId() {
-        return roomId;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public void cancel() {
-        active = false;
     }
 
     public void display() {
-        System.out.println("Reservation ID: " + reservationId);
-        System.out.println("Guest Name: " + guestName);
-        System.out.println("Room Type: " + roomType);
-        System.out.println("Room ID: " + roomId);
-        System.out.println("Status: " + (active ? "Confirmed" : "Cancelled"));
-        System.out.println("---------------------------");
+        System.out.println(reservationId + " | " + guestName + " | " + roomType);
     }
 }
 
-// Cancellation Service
-class CancellationService {
 
-    private Map<String, Reservation> reservations;
-    private Map<String, Integer> inventory;
-    private Stack<String> rollbackStack;
+class SystemState implements Serializable {
 
-    public CancellationService(Map<String, Reservation> reservations,
-                               Map<String, Integer> inventory) {
-        this.reservations = reservations;
+    private static final long serialVersionUID = 1L;
+
+    Map<String, Integer> inventory;
+    List<Reservation> bookingHistory;
+
+    public SystemState(Map<String, Integer> inventory, List<Reservation> bookingHistory) {
         this.inventory = inventory;
-        this.rollbackStack = new Stack<>();
-    }
-
-    public void cancelBooking(String reservationId) {
-
-        if (!reservations.containsKey(reservationId)) {
-            System.out.println("Cancellation Failed: Reservation not found.");
-            return;
-        }
-
-        Reservation res = reservations.get(reservationId);
-
-        if (!res.isActive()) {
-            System.out.println("Cancellation Failed: Reservation already cancelled.");
-            return;
-        }
-
-        // Record room ID for rollback tracking
-        rollbackStack.push(res.getRoomId());
-
-        // Restore inventory
-        String roomType = res.getRoomType();
-        inventory.put(roomType, inventory.get(roomType) + 1);
-
-        // Mark reservation cancelled
-        res.cancel();
-
-        System.out.println("Booking cancelled successfully for ID: " + reservationId);
-    }
-
-    public void showRollbackStack() {
-        System.out.println("Rollback Stack (Released Room IDs): " + rollbackStack);
+        this.bookingHistory = bookingHistory;
     }
 }
 
-  class UseCase10BookingCancellation {
+
+class PersistenceService {
+
+    private static final String FILE_NAME = "hotel_state.dat";
+
+    // Save system state
+    public void saveState(SystemState state) {
+
+        try (ObjectOutputStream oos =
+                     new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
+
+            oos.writeObject(state);
+            System.out.println("System state saved successfully.");
+
+        } catch (IOException e) {
+            System.out.println("Error saving system state: " + e.getMessage());
+        }
+    }
+
+    public SystemState loadState() {
+
+        try (ObjectInputStream ois =
+                     new ObjectInputStream(new FileInputStream(FILE_NAME))) {
+
+            System.out.println("System state restored successfully.");
+            return (SystemState) ois.readObject();
+
+        } catch (Exception e) {
+
+            System.out.println("No previous state found. Starting fresh.");
+
+            Map<String, Integer> inventory = new HashMap<>();
+            inventory.put("Standard", 3);
+            inventory.put("Deluxe", 2);
+
+            return new SystemState(inventory, new ArrayList<>());
+        }
+    }
+}
+
+  class UseCase12DataPersistenceRecovery {
 
     public static void main(String[] args) {
 
-        // Inventory
-        Map<String, Integer> inventory = new HashMap<>();
-        inventory.put("Standard", 1);
-        inventory.put("Deluxe", 1);
+        PersistenceService persistenceService = new PersistenceService();
 
-        // Reservation storage
-        Map<String, Reservation> reservations = new HashMap<>();
+        SystemState state = persistenceService.loadState();
 
-        // Simulate confirmed bookings
-        Reservation r1 = new Reservation("RES301", "Alice", "Standard", "S101");
-        Reservation r2 = new Reservation("RES302", "Bob", "Deluxe", "D201");
+        Map<String, Integer> inventory = state.inventory;
+        List<Reservation> bookingHistory = state.bookingHistory;
 
-        reservations.put(r1.getReservationId(), r1);
-        reservations.put(r2.getReservationId(), r2);
-
-        CancellationService cancelService = new CancellationService(reservations, inventory);
-
-        System.out.println("Before Cancellation:");
-        r1.display();
-        r2.display();
-
-        // Cancel booking
-        cancelService.cancelBooking("RES301");
-
-        // Attempt invalid cancellation
-        cancelService.cancelBooking("RES999");
-
-        System.out.println("\nAfter Cancellation:");
-        r1.display();
-        r2.display();
-
-        cancelService.showRollbackStack();
-
-        System.out.println("\nUpdated Inventory:");
+        System.out.println("\nCurrent Inventory:");
         for (String type : inventory.keySet()) {
             System.out.println(type + " : " + inventory.get(type));
         }
+
+        Reservation newBooking = new Reservation("RES501", "Alice", "Standard");
+
+        if (inventory.get("Standard") > 0) {
+            inventory.put("Standard", inventory.get("Standard") - 1);
+            bookingHistory.add(newBooking);
+            System.out.println("\nBooking confirmed for Alice.");
+        } else {
+            System.out.println("\nNo Standard rooms available.");
+        }
+
+        System.out.println("\nBooking History:");
+        for (Reservation r : bookingHistory) {
+            r.display();
+        }
+
+        persistenceService.saveState(new SystemState(inventory, bookingHistory));
     }
 }
